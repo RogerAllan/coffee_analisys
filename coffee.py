@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html
+from dash import Dash, dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
 
@@ -58,17 +58,35 @@ cleaner.load_data()
 cleaner.validate_data()
 cleaner.clean_data()
 df_cleaned = cleaner.df
+opcoes = list(df_cleaned["Farm Name"].unique())
+opcoes.append("All Farms")
 
 # Create the initial figure for the bar graph
-fig_cf = px.bar(df_cleaned,x='Farm Name', y='Region')
-fig = px.scatter(df_cleaned,x='Overall', y='Flavor', color= 'Farm Name')
+fig_cf = px.bar(df_cleaned, x='Farm Name', y='Region')
+
 # Define the Dash layout
 app.layout = html.Div(
     children=[
         dcc.Graph(figure=fig_cf),  # Display the bar graph
-        dcc.Graph(figure=fig)
+        html.Div(children='Coffee Analysis'),
+        dcc.Dropdown(options=[{'label': i, 'value': i} for i in opcoes], value='All Farms', id='farm-dropdown'),
+        dcc.Graph(id='farm-region-chart')  # Display the updated bar graph based on the selected farm
     ]
 )
+
+# Define the callback to update the bar graph based on the selected farm
+@app.callback(
+    Output('farm-region-chart', 'figure'),
+    Input('farm-dropdown', 'value')
+)
+def update_bar_graph(selected_farm):
+    if selected_farm == 'All Farms':
+        filtered_df = df_cleaned
+    else:
+        filtered_df = df_cleaned[df_cleaned['Farm Name'] == selected_farm]
+    
+    fig = px.pie(filtered_df, names='Harvest Year', values='Acidity', color='Farm Name')
+    return fig
 
 # Run the Dash application
 if __name__ == '__main__':
